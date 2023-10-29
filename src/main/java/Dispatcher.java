@@ -16,7 +16,7 @@ public class Dispatcher {
         updateRc5Password();
 
         System.out.println("""
-                
+                                
                 Options:
                   1 - encrypt file
                   2 - decrypt file
@@ -78,7 +78,7 @@ public class Dispatcher {
 
     private void updateRc5Password() {
         System.out.print("Input RC5 password: ");
-        this.rc5Utils = new RC5Utils(RC5Utils.WordLength._16, 12, 16, scanner.next());
+        this.rc5Utils = new RC5Utils(RC5Utils.WordLength._64, 12, 16, scanner.next());
     }
 
     public static void main(String[] args) {

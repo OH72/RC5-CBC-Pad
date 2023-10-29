@@ -1,3 +1,5 @@
+import java.util.Arrays;
+
 /**
  * @author Oleh Hembarovskyi
  * @since 29/10/2023
@@ -137,14 +139,24 @@ public class RC5Utils {
         return result;
     }
 
+    private byte[] messagePadding(byte[] message) {
+        if (message.length % (wordLengthInBytes * 2) == 0) {
+            return Arrays.copyOf(message, message.length);
+        }
+
+        int bytesToAdd = wordLengthInBytes * 2 - message.length % (wordLengthInBytes * 2);
+        byte[] result = new byte[message.length + bytesToAdd];
+        System.arraycopy(message, 0, result, 0, message.length);
+
+        for (int i = 0; i < bytesToAdd; i++) {
+            result[message.length + i] = (byte) bytesToAdd;
+        }
+
+        return result;
+    }
+
     public byte[] encrypt(byte[] message) {
-        int extendedMessageLength = (message.length / wordLengthInBytes + message.length % wordLengthInBytes);
-        extendedMessageLength += extendedMessageLength % 2;
-        extendedMessageLength *= wordLengthInBytes;
-
-        byte[] extendedMessage = new byte[extendedMessageLength];
-        System.arraycopy(message, 0, extendedMessage, 0, message.length);
-
+        byte[] extendedMessage = messagePadding(message);
         long[] words = splitArrayToWords(extendedMessage);
         byte[] result = new byte[extendedMessage.length];
 
