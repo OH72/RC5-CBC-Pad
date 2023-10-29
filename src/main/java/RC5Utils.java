@@ -156,6 +156,44 @@ public class RC5Utils {
         return result;
     }
 
+    private byte[] decryptTwoWords(long a, long b) {
+        a = (a + s[0]) & wordBytesUsage;
+        b = (b + s[1]) & wordBytesUsage;
+
+        for (int i = 0; i < numberOfRounds; i++) {
+            b = ((b - s[2 * i + 1]) >> a) ^ a;
+            a = ((a - s[2 * i]) >> b) ^ b;
+        }
+
+        b = b - s[1];
+        a = a - s[0];
+
+        byte[] result = new byte[wordLengthInBytes * 2];
+        System.arraycopy(longToByteArray(a), 0, result, 0, wordLengthInBytes);
+        System.arraycopy(longToByteArray(b), 0, result, wordLengthInBytes, wordLengthInBytes);
+
+        return result;
+    }
+
+    public byte[] decrypt(byte[] message) {
+        int extendedMessageLength = (message.length / wordLengthInBytes + message.length % wordLengthInBytes);
+        extendedMessageLength += extendedMessageLength % 2;
+        extendedMessageLength *= wordLengthInBytes;
+
+        byte[] extendedMessage = new byte[extendedMessageLength];
+        System.arraycopy(message, 0, extendedMessage, 0, message.length);
+
+        long[] words = splitArrayToWords(extendedMessage);
+        byte[] result = new byte[extendedMessage.length];
+
+        for (int i = 0; i < words.length; i += 2) {
+            byte[] twoWordsEncrypted = decryptTwoWords(words[i], words[i + 1]);
+            System.arraycopy(twoWordsEncrypted, 0, result, i * wordLengthInBytes, twoWordsEncrypted.length);
+        }
+
+        return result;
+    }
+
     public enum WordLength {
         _16(
                 16,

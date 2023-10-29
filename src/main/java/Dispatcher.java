@@ -16,6 +16,7 @@ public class Dispatcher {
         updateRc5Password();
 
         System.out.println("""
+                
                 Options:
                   1 - encrypt file
                   2 - decrypt file
@@ -67,8 +68,7 @@ public class Dispatcher {
             Path destinationPath = Paths.get(destinationFilePath);
 
             byte[] sourceBytes = Files.readAllBytes(sourcePath);
-            // fixme
-            byte[] destinationBytes = rc5Utils.encrypt(sourceBytes);
+            byte[] destinationBytes = rc5Utils.decrypt(sourceBytes);
 
             Files.write(destinationPath, destinationBytes);
         } catch (IOException e) {
