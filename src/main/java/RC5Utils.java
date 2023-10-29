@@ -1,153 +1,182 @@
-import java.util.Random;
-
 /**
  * @author Oleh Hembarovskyi
  * @since 29/10/2023
  **/
 public class RC5Utils {
-    private final int wordLengthInBits;
     private final int wordLengthInBytes;
-    private final byte[] arrP;
-    private final byte[] arrQ;
+    private final long wordBytesUsage;
+    private final long arrP;
+    private final long arrQ;
     private final int numberOfRounds;
     private final int secretKeyLengthInBytes;
+    private final long[] s;
 
-    public RC5Utils(WordLength wordLength, int numberOfRounds, int secretKeyLengthInBytes) {
-        this.wordLengthInBits = wordLength.getLength();
-        this.wordLengthInBytes = wordLengthInBits / 8 + wordLengthInBits % 8;
+    public RC5Utils(WordLength wordLength, int numberOfRounds, int secretKeyLengthInBytes, String password) {
+        this.wordLengthInBytes = wordLength.getLength() / 8 + wordLength.getLength() % 8;
+        this.wordBytesUsage = wordLength.bytesUsage;
         this.arrP = wordLength.getP();
         this.arrQ = wordLength.getQ();
         this.numberOfRounds = numberOfRounds;
         this.secretKeyLengthInBytes = secretKeyLengthInBytes;
+        this.s = generateArrayS(password);
     }
 
-    public byte[] generateArrayS() {
-        byte[] arrK = generateSecretKey();
-        byte[][] arrL = splitArrayToWords(arrK);
-        byte[][] arrS = initArrayS();
+    public long[] generateArrayS(String password) {
+        byte[] arrK = generateSecretKey(password);
+        long[] arrL = splitArrayToWords(arrK);
+        long[] arrS = initArrayS();
 
         int i = 0;
         int j = 0;
-        byte[] arrA = new byte[wordLengthInBytes];
-        byte[] arrB = new byte[wordLengthInBytes];
-        int t = Math.max(arrL.length, 2 * numberOfRounds + 1);
+        long a = 0;
+        long b = 0;
+        int t = Math.max(arrL.length, 2 * numberOfRounds + 2);
 
         for (int s = 1; s < t * 3; s++) {
-            s[i] = byteArraysSum(s[i] +)
-        }
-    }
+            arrS[i] = ((arrS[i] + a + b) << 3) & wordBytesUsage;
+            a = arrS[i];
+            i = (i + 1) % (2 * numberOfRounds + 2);
 
-    private byte[] generateSecretKey() {
-        // todo : replace
-        byte[] secretKey = new byte[secretKeyLengthInBytes];
 
-        Random random = new Random();
-        random.nextBytes(secretKey);
-
-        return secretKey;
-    }
-
-    private byte[][] splitArrayToWords(byte[] byteArray) {
-        int numberOfWords = byteArray.length / wordLengthInBytes + byteArray.length % wordLengthInBytes;
-        byte[][] wordList = new byte[numberOfWords][wordLengthInBytes];
-
-        for (int i = 0; i < numberOfWords; i++) {
-            int offset = i * wordLengthInBytes;
-            int numberOfBytes = Math.min(wordLengthInBytes, byteArray.length - offset * i);
-
-            System.arraycopy(byteArray, offset, wordList[i], 0, numberOfBytes);
-        }
-
-        return wordList;
-    }
-
-    private byte[][] initArrayS() {
-        byte[][] arrS = new byte[2 * numberOfRounds + 1][wordLengthInBytes];
-        arrS[0] = arrP;
-
-        for (int i = 1; i < arrS.length; i++) {
-            arrS[i] = byteArraysSum(arrS[i - 1], arrQ);
+            arrL[j] = ((arrL[j] + a + b) << (a + b)) & wordBytesUsage;
+            b = arrL[j];
+            j = (j + 1) % arrL.length;
         }
 
         return arrS;
     }
 
-    private static byte[] byteArraysSum(byte[] arrA, byte[] arrB) {
-        if (arrA.length != arrB.length) {
-            throw new RuntimeException("byteArraysSum(): arrA.size != arrB.size");
+    private byte[] generateSecretKey(String password) {
+        byte[] hash = MD5Utils.md5(password.getBytes());
+
+        if (hash.length > secretKeyLengthInBytes) {
+            byte[] result = new byte[secretKeyLengthInBytes];
+            System.arraycopy(hash, hash.length - secretKeyLengthInBytes, result, 0, secretKeyLengthInBytes);
+
+            return result;
         }
 
-        byte[] result = new byte[arrA.length];
-        byte carry = 0;
+        if (hash.length < secretKeyLengthInBytes) {
+            byte[] result = new byte[secretKeyLengthInBytes];
 
-        for (int i = arrA.length - 1; i >= 0; i--) {
-            int sum = (arrA[i] & 0xFF) + (arrB[i] & 0xFF) + (carry & 0xFF);
-            result[i] = (byte) sum;
-            carry = (byte) (sum >> 8);
-        }
-
-        return result;
-    }
-
-    private static byte[] byteArraysDiff(byte[] arrA, byte[] arrB) {
-        if (arrA.length != arrB.length) {
-            throw new RuntimeException("byteArraysDiff(): arrA.size != arrB.size");
-        }
-
-        byte[] result = new byte[arrA.length];
-        byte borrow = 0;
-
-        for (int i = arrA.length - 1; i >= 0; i--) {
-            int diff = (arrA[i] & 0xFF) - (arrB[i] & 0xFF) - (borrow & 0xFF);
-
-            if (diff < 0) {
-                borrow = 1;
-                diff += 256;
-            } else {
-                borrow = 0;
+            for (int i = 0; i < secretKeyLengthInBytes / hash.length + secretKeyLengthInBytes % hash.length; i++) {
+                System.arraycopy(hash, 0, result, secretKeyLengthInBytes - (i + 1) * hash.length, hash.length);
+                hash = MD5Utils.md5(hash);
             }
 
-            result[i] = (byte) diff;
+            return result;
         }
+
+        return hash;
+    }
+
+    private long[] splitArrayToWords(byte[] byteArray) {
+        int numberOfWords = byteArray.length / wordLengthInBytes + byteArray.length % wordLengthInBytes;
+        long[] wordList = new long[numberOfWords];
+
+
+        for (int i = 0; i < numberOfWords; i++) {
+            int offset = i * wordLengthInBytes;
+            int numberOfBytes = Math.min(wordLengthInBytes, byteArray.length - offset * i);
+
+            byte[] value = new byte[wordLengthInBytes];
+            System.arraycopy(byteArray, offset, value, 0, numberOfBytes);
+
+            wordList[i] = byteArrayToLong(value);
+        }
+
+        return wordList;
+    }
+
+    private long byteArrayToLong(byte[] byteArray) {
+        long value = 0L;
+
+        for (int i = byteArray.length - 1; i >= 0; i--) {
+            value = (value << 8) + (byteArray[i] & 0xF);
+        }
+
+        return value;
+    }
+
+    private byte[] longToByteArray(long value) {
+        byte[] byteArray = new byte[wordLengthInBytes];
+
+        for (int i = byteArray.length - 1; i >= 0; i--) {
+            byteArray[i] = (byte) (value & 0xF);
+            value >>= 8;
+        }
+
+        return byteArray;
+    }
+
+    private long[] initArrayS() {
+        long[] arrS = new long[2 * numberOfRounds + 1];
+        arrS[0] = arrP;
+
+        for (int i = 1; i < arrS.length; i++) {
+            arrS[i] = (arrS[i - 1] + arrQ) & wordBytesUsage;
+        }
+
+        return arrS;
+    }
+
+    private byte[] encryptTwoWords(long a, long b) {
+        a = (a + s[0]) & wordBytesUsage;
+        b = (b + s[1]) & wordBytesUsage;
+
+        for (int i = 0; i < numberOfRounds; i++) {
+            a = ((a ^ b) << b) & wordBytesUsage;
+            a = (a + s[2 * i]) & wordBytesUsage;
+
+            b = ((b ^ a) << a) & wordBytesUsage;
+            b = (b + s[2 * i + 1]) & wordBytesUsage;
+        }
+
+        byte[] result = new byte[wordLengthInBytes * 2];
+        System.arraycopy(longToByteArray(a), 0, result, 0, wordLengthInBytes);
+        System.arraycopy(longToByteArray(b), 0, result, wordLengthInBytes, wordLengthInBytes);
+
         return result;
     }
 
+    public byte[] encrypt(byte[] message) {
+        long[] words = splitArrayToWords(message);
 
-    public static byte[] encrypt(byte[] byteArray) {
-        byte[] result = new byte[byteArray.length];
-        int offset = 0;
+        byte[] result = new byte[message.length];
 
-        for (byte[] word : splitArrayToWords(byteArray)) {
-            System.arraycopy(encryptWord(word), 0, result, offset, word.length);
-            offset += word.length;
+        for (int i = 0; i < words.length; i += 2) {
+            byte[] twoWordsEncrypted = encryptTwoWords(words[i], words[i + 1]);
+            System.arraycopy(twoWordsEncrypted, 0, result, i * 2 * wordLengthInBytes, wordLengthInBytes * 2);
         }
 
         return result;
-    }
-
-
-    private static byte[] encryptWord(byte[] word, byte[] secretKey) {
-
     }
 
     public enum WordLength {
         _16(
                 16,
-                new byte[]{(byte) 0xB7, (byte) 0xE1},
-                new byte[]{(byte) 0x9E, (byte) 0x37}),
-        _32(32,
-                new byte[]{(byte) 0xB7, (byte) 0xE1, (byte) 0x51, (byte) 0x63},
-                new byte[]{(byte) 0x9E, (byte) 0x37, (byte) 0x79, (byte) 0xB9}),
-        _64(64,
-                new byte[]{(byte) 0xB7, (byte) 0xE1, (byte) 0x51, (byte) 0x62, (byte) 0x8A, (byte) 0xD2, (byte) 0xA6, (byte) 0x6B},
-                new byte[]{(byte) 0x9E, (byte) 0x37, (byte) 0x79, (byte) 0xB9, (byte) 0x7F, (byte) 0x4A, (byte) 0x7C, (byte) 0x15});
+                0x000000000000FFFFL,
+                0x000000000000B7E1L,
+                0x0000000000009E37L),
+        _32(
+                32,
+                0x00000000FFFFFFFFL,
+                0x00000000B7E15163L,
+                0x000000009E3779B9L),
+        _64(
+                64,
+                0xFFFFFFFFFFFFFFFFL,
+                0xB7E151628AD2A66BL,
+                0x9E3779B97F4A7C15L);
 
         private final int length;
-        private final byte[] p;
-        private final byte[] q;
+        private final long bytesUsage;
+        private final long p;
+        private final long q;
 
-        WordLength(int length, byte[] p, byte[] q) {
+        WordLength(int length, long bytesUsage, long p, long q) {
             this.length = length;
+            this.bytesUsage = bytesUsage;
             this.p = p;
             this.q = q;
         }
@@ -156,11 +185,15 @@ public class RC5Utils {
             return length;
         }
 
-        public byte[] getP() {
+        public long getBytesUsage() {
+            return bytesUsage;
+        }
+
+        public long getP() {
             return p;
         }
 
-        public byte[] getQ() {
+        public long getQ() {
             return q;
         }
     }
