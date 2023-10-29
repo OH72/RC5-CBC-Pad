@@ -35,8 +35,7 @@ public class RC5Utils {
         for (int s = 1; s < t * 3; s++) {
             arrS[i] = ((arrS[i] + a + b) << 3) & wordBytesUsage;
             a = arrS[i];
-            i = (i + 1) % (2 * numberOfRounds + 2);
-
+            i = (i + 1) % t;
 
             arrL[j] = ((arrL[j] + a + b) << (a + b)) & wordBytesUsage;
             b = arrL[j];
@@ -74,10 +73,9 @@ public class RC5Utils {
         int numberOfWords = byteArray.length / wordLengthInBytes + byteArray.length % wordLengthInBytes;
         long[] wordList = new long[numberOfWords];
 
-
         for (int i = 0; i < numberOfWords; i++) {
             int offset = i * wordLengthInBytes;
-            int numberOfBytes = Math.min(wordLengthInBytes, byteArray.length - offset * i);
+            int numberOfBytes = Math.min(wordLengthInBytes, byteArray.length - offset);
 
             byte[] value = new byte[wordLengthInBytes];
             System.arraycopy(byteArray, offset, value, 0, numberOfBytes);
@@ -110,7 +108,7 @@ public class RC5Utils {
     }
 
     private long[] initArrayS() {
-        long[] arrS = new long[2 * numberOfRounds + 1];
+        long[] arrS = new long[2 * numberOfRounds + 2];
         arrS[0] = arrP;
 
         for (int i = 1; i < arrS.length; i++) {
@@ -140,13 +138,19 @@ public class RC5Utils {
     }
 
     public byte[] encrypt(byte[] message) {
-        long[] words = splitArrayToWords(message);
+        int extendedMessageLength = (message.length / wordLengthInBytes + message.length % wordLengthInBytes);
+        extendedMessageLength += extendedMessageLength % 2;
+        extendedMessageLength *= wordLengthInBytes;
 
-        byte[] result = new byte[message.length];
+        byte[] extendedMessage = new byte[extendedMessageLength];
+        System.arraycopy(message, 0, extendedMessage, 0, message.length);
+
+        long[] words = splitArrayToWords(extendedMessage);
+        byte[] result = new byte[extendedMessage.length];
 
         for (int i = 0; i < words.length; i += 2) {
             byte[] twoWordsEncrypted = encryptTwoWords(words[i], words[i + 1]);
-            System.arraycopy(twoWordsEncrypted, 0, result, i * 2 * wordLengthInBytes, wordLengthInBytes * 2);
+            System.arraycopy(twoWordsEncrypted, 0, result, i * wordLengthInBytes, twoWordsEncrypted.length);
         }
 
         return result;

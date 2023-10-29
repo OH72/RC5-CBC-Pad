@@ -17,18 +17,20 @@ public class Dispatcher {
 
         System.out.println("""
                 Options:
-                  1     - encrypt file
-                  2     - decrypt file
-                  3     - change password
-                  else  - exit
+                  1 - encrypt file
+                  2 - decrypt file
+                  3 - change password
+                  9 - exit
                 """);
 
         while (true) {
-            switch (scanner.nextInt()) {
-                case 1 -> encryptFile();
-                case 2 -> decryptFile();
-                case 3 -> updateRc5Password();
-                default -> {
+            System.out.print("<---->\nInput option: ");
+
+            switch (scanner.next()) {
+                case "1" -> encryptFile();
+                case "2" -> decryptFile();
+                case "3" -> updateRc5Password();
+                case "9" -> {
                     return;
                 }
             }
