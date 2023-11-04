@@ -83,7 +83,7 @@ public class Dispatcher {
 
     private void updateRc5Password() {
         System.out.print("Input RC5 password: ");
-        this.rc5Utils = new RC5Utils(RC5Utils.WordLength._32, 12, 16, scanner.next());
+        this.rc5Utils = new RC5Utils(RC5Utils.WordLength._32, 20, 16, scanner.next());
     }
 
     private void encryptMessage() {
