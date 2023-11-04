@@ -127,7 +127,7 @@ public class RC5Utils {
         return arrS;
     }
 
-    private byte[] messagePadding(byte[] message) {
+    private byte[] addMessagePadding(byte[] message) {
         if (message.length % (wordLengthInBytes * 2) == 0) {
             return Arrays.copyOf(message, message.length);
         }
@@ -141,6 +141,21 @@ public class RC5Utils {
         }
 
         return result;
+    }
+
+    private byte[] removeMessagePadding(byte[] message) {
+        byte lastByte = message[message.length - 1];
+
+        for (int i = 0; i < lastByte; i++) {
+            if (message[message.length - 1 - i] != lastByte) {
+                return message;
+            }
+        }
+
+        byte[] messageWithoutPadding = new byte[message.length - lastByte];
+        System.arraycopy(message, 0, messageWithoutPadding, 0, messageWithoutPadding.length);
+
+        return messageWithoutPadding;
     }
 
     private long loopLeftShift(long value, long bits) {
@@ -212,7 +227,7 @@ public class RC5Utils {
     }
 
     public byte[] encryptCbc(byte[] message) {
-        byte[] extendedMessage = messagePadding(message);
+        byte[] extendedMessage = addMessagePadding(message);
         long[] words = splitArrayToWords(extendedMessage);
         byte[] result = new byte[wordLengthInBytes * 2 + extendedMessage.length];
 
@@ -283,11 +298,11 @@ public class RC5Utils {
             preB = words[i + 1];
         }
 
-        return result;
+        return  removeMessagePadding(result);
     }
 
     public byte[] encryptEcb(byte[] message) {
-        byte[] extendedMessage = messagePadding(message);
+        byte[] extendedMessage = addMessagePadding(message);
         long[] words = splitArrayToWords(extendedMessage);
         byte[] result = new byte[extendedMessage.length];
 
@@ -322,7 +337,7 @@ public class RC5Utils {
             System.arraycopy(longToByteArray(twoWordsDecrypted[1]), 0, result, (i + 1) * wordLengthInBytes, wordLengthInBytes);
         }
 
-        return result;
+        return  removeMessagePadding(result);
     }
 
     public enum WordLength {
