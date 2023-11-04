@@ -13,8 +13,6 @@ public class RC5Utils {
     private final int numberOfRounds;
     private final int secretKeyLengthInBytes;
     private final long[] s;
-    private final long ivA;
-    private final long ivB;
 
     public RC5Utils(WordLength wordLength, int numberOfRounds, int secretKeyLengthInBytes, String password) {
         this.wordLengthInBits = wordLength.getLength();
@@ -25,8 +23,6 @@ public class RC5Utils {
         this.numberOfRounds = numberOfRounds;
         this.secretKeyLengthInBytes = secretKeyLengthInBytes;
         this.s = generateArrayS(password);
-        this.ivA = 99000090;
-        this.ivB = 32423433;
     }
 
     public long[] generateArrayS(String password) {
@@ -207,13 +203,25 @@ public class RC5Utils {
         return new long[]{a, b};
     }
 
-    public byte[] encrypt(byte[] message) {
+    private long[] generateIv() {
+        return new long[]{190, 1920312};
+    }
+
+    public byte[] encryptCbc(byte[] message) {
         byte[] extendedMessage = messagePadding(message);
         long[] words = splitArrayToWords(extendedMessage);
-        byte[] result = new byte[extendedMessage.length];
+        byte[] result = new byte[wordLengthInBytes * 2 + extendedMessage.length];
 
-        long preA = ivA;
-        long preB = ivB;
+        // Calculate IV
+        long[] iv = generateIv();
+        byte[] ivArr = new byte[wordLengthInBytes * 2];
+        System.arraycopy(longToByteArray(iv[0]), 0, ivArr, 0, wordLengthInBytes);
+        System.arraycopy(longToByteArray(iv[1]), 0, ivArr, wordLengthInBytes, wordLengthInBytes);
+        byte[] encryptedIv = encryptEcb(ivArr);
+        System.arraycopy(encryptedIv, 0, result, 0, encryptedIv.length);
+
+        long preA = iv[0];
+        long preB = iv[1];
 
         for (int i = 0; i < words.length; i += 2) {
             long wordA = words[i] ^ preA;
@@ -221,8 +229,8 @@ public class RC5Utils {
 
             long[] twoWordsEncrypted = encryptTwoWords(wordA, wordB);
 
-            System.arraycopy(longToByteArray(twoWordsEncrypted[0]), 0, result, i * wordLengthInBytes, wordLengthInBytes);
-            System.arraycopy(longToByteArray(twoWordsEncrypted[1]), 0, result, (i + 1) * wordLengthInBytes, wordLengthInBytes);
+            System.arraycopy(longToByteArray(twoWordsEncrypted[0]), 0, result, ivArr.length + i * wordLengthInBytes, wordLengthInBytes);
+            System.arraycopy(longToByteArray(twoWordsEncrypted[1]), 0, result, ivArr.length + (i + 1) * wordLengthInBytes, wordLengthInBytes);
 
             preA = twoWordsEncrypted[0];
             preB = twoWordsEncrypted[1];
@@ -231,19 +239,32 @@ public class RC5Utils {
         return result;
     }
 
-    public byte[] decrypt(byte[] message) {
-        int extendedMessageLength = (message.length / wordLengthInBytes + message.length % wordLengthInBytes);
+    public byte[] decryptCbc(byte[] message) {
+        // Calculate IV
+        byte[] ivArr = new byte[wordLengthInBytes * 2];
+        System.arraycopy(message, 0, ivArr, 0, ivArr.length);
+        byte[] decryptedIv = decryptEcb(ivArr);
+        byte[] ivA = new byte[wordLengthInBytes];
+        byte[] ivB = new byte[wordLengthInBytes];
+        System.arraycopy(decryptedIv, 0, ivA, 0, wordLengthInBytes);
+        System.arraycopy(decryptedIv, wordLengthInBytes, ivB, 0, wordLengthInBytes);
+
+        long preA = byteArrayToLong(ivA);
+        long preB = byteArrayToLong(ivB);
+
+        // Resolve message
+        byte[] messageWithoutIv = new byte[message.length - wordLengthInBytes * 2];
+        System.arraycopy(message, wordLengthInBytes * 2, messageWithoutIv, 0, message.length - wordLengthInBytes * 2);
+
+        int extendedMessageLength = (messageWithoutIv.length / wordLengthInBytes + messageWithoutIv.length % wordLengthInBytes);
         extendedMessageLength += extendedMessageLength % 2;
         extendedMessageLength *= wordLengthInBytes;
 
         byte[] extendedMessage = new byte[extendedMessageLength];
-        System.arraycopy(message, 0, extendedMessage, 0, message.length);
+        System.arraycopy(messageWithoutIv, 0, extendedMessage, 0, messageWithoutIv.length);
 
         long[] words = splitArrayToWords(extendedMessage);
         byte[] result = new byte[extendedMessage.length];
-
-        long preA = ivA;
-        long preB = ivB;
 
         for (int i = 0; i < words.length; i += 2) {
             long[] twoWordsDecrypted = decryptTwoWords(words[i], words[i + 1]);
@@ -256,6 +277,45 @@ public class RC5Utils {
 
             preA = words[i];
             preB = words[i + 1];
+        }
+
+        return result;
+    }
+
+    public byte[] encryptEcb(byte[] message) {
+        byte[] extendedMessage = messagePadding(message);
+        long[] words = splitArrayToWords(extendedMessage);
+        byte[] result = new byte[extendedMessage.length];
+
+        for (int i = 0; i < words.length; i += 2) {
+            long wordA = words[i];
+            long wordB = words[i + 1];
+
+            long[] twoWordsEncrypted = encryptTwoWords(wordA, wordB);
+
+            System.arraycopy(longToByteArray(twoWordsEncrypted[0]), 0, result, i * wordLengthInBytes, wordLengthInBytes);
+            System.arraycopy(longToByteArray(twoWordsEncrypted[1]), 0, result, (i + 1) * wordLengthInBytes, wordLengthInBytes);
+        }
+
+        return result;
+    }
+
+    public byte[] decryptEcb(byte[] message) {
+        int extendedMessageLength = (message.length / wordLengthInBytes + message.length % wordLengthInBytes);
+        extendedMessageLength += extendedMessageLength % 2;
+        extendedMessageLength *= wordLengthInBytes;
+
+        byte[] extendedMessage = new byte[extendedMessageLength];
+        System.arraycopy(message, 0, extendedMessage, 0, message.length);
+
+        long[] words = splitArrayToWords(extendedMessage);
+        byte[] result = new byte[extendedMessage.length];
+
+        for (int i = 0; i < words.length; i += 2) {
+            long[] twoWordsDecrypted = decryptTwoWords(words[i], words[i + 1]);
+
+            System.arraycopy(longToByteArray(twoWordsDecrypted[0]), 0, result, i * wordLengthInBytes, wordLengthInBytes);
+            System.arraycopy(longToByteArray(twoWordsDecrypted[1]), 0, result, (i + 1) * wordLengthInBytes, wordLengthInBytes);
         }
 
         return result;

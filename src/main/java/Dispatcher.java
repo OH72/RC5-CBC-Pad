@@ -54,7 +54,7 @@ public class Dispatcher {
             Path destinationPath = Paths.get(destinationFilePath);
 
             byte[] sourceBytes = Files.readAllBytes(sourcePath);
-            byte[] destinationBytes = rc5Utils.encrypt(sourceBytes);
+            byte[] destinationBytes = rc5Utils.encryptCbc(sourceBytes);
 
             Files.write(destinationPath, destinationBytes);
         } catch (IOException e) {
@@ -73,7 +73,7 @@ public class Dispatcher {
             Path destinationPath = Paths.get(destinationFilePath);
 
             byte[] sourceBytes = Files.readAllBytes(sourcePath);
-            byte[] destinationBytes = rc5Utils.decrypt(sourceBytes);
+            byte[] destinationBytes = rc5Utils.encryptCbc(sourceBytes);
 
             Files.write(destinationPath, destinationBytes);
         } catch (IOException e) {
@@ -90,7 +90,7 @@ public class Dispatcher {
         System.out.print("Message to encrypt: ");
         String sourceMessage = scanner.next();
 
-        byte[] resultBytes = rc5Utils.encrypt(sourceMessage.getBytes());
+        byte[] resultBytes = rc5Utils.encryptCbc(sourceMessage.getBytes());
 
         System.out.println("Encrypted message:");
         System.out.println(new String(Base64.getEncoder().encode(resultBytes)));
@@ -100,7 +100,7 @@ public class Dispatcher {
         System.out.print("64Based message to decrypt: ");
         String sourceMessage = scanner.next();
 
-        byte[] resultBytes = rc5Utils.decrypt(Base64.getDecoder().decode(sourceMessage.getBytes()));
+        byte[] resultBytes = rc5Utils.decryptCbc(Base64.getDecoder().decode(sourceMessage.getBytes()));
 
         System.out.println("Decrypted message:");
         System.out.println(new String(resultBytes));
