@@ -13,6 +13,8 @@ public class RC5Utils {
     private final int numberOfRounds;
     private final int secretKeyLengthInBytes;
     private final long[] s;
+    private final long ivA;
+    private final long ivB;
 
     public RC5Utils(WordLength wordLength, int numberOfRounds, int secretKeyLengthInBytes, String password) {
         this.wordLengthInBits = wordLength.getLength();
@@ -23,6 +25,8 @@ public class RC5Utils {
         this.numberOfRounds = numberOfRounds;
         this.secretKeyLengthInBytes = secretKeyLengthInBytes;
         this.s = generateArrayS(password);
+        this.ivA = 99000090;
+        this.ivB = 32423433;
     }
 
     public long[] generateArrayS(String password) {
@@ -169,7 +173,7 @@ public class RC5Utils {
         return (value | copyValue);
     }
 
-    private byte[] encryptTwoWords(long a, long b) {
+    private long[] encryptTwoWords(long a, long b) {
         a = (a + s[0]) & wordBytesUsage;
         b = (b + s[1]) & wordBytesUsage;
 
@@ -183,14 +187,10 @@ public class RC5Utils {
             b = (b + s[2 * i + 1]) & wordBytesUsage;
         }
 
-        byte[] result = new byte[wordLengthInBytes * 2];
-        System.arraycopy(longToByteArray(a), 0, result, 0, wordLengthInBytes);
-        System.arraycopy(longToByteArray(b), 0, result, wordLengthInBytes, wordLengthInBytes);
-
-        return result;
+        return new long[]{a, b};
     }
 
-    private byte[] decryptTwoWords(long a, long b) {
+    private long[] decryptTwoWords(long a, long b) {
         for (int i = numberOfRounds; i >= 1; i--) {
             b = (b - s[2 * i + 1]) & wordBytesUsage;
             b = loopRightShift(b, a);
@@ -204,11 +204,7 @@ public class RC5Utils {
         b = (b - s[1]) & wordBytesUsage;
         a = (a - s[0]) & wordBytesUsage;
 
-        byte[] result = new byte[wordLengthInBytes * 2];
-        System.arraycopy(longToByteArray(a), 0, result, 0, wordLengthInBytes);
-        System.arraycopy(longToByteArray(b), 0, result, wordLengthInBytes, wordLengthInBytes);
-
-        return result;
+        return new long[]{a, b};
     }
 
     public byte[] encrypt(byte[] message) {
@@ -216,9 +212,20 @@ public class RC5Utils {
         long[] words = splitArrayToWords(extendedMessage);
         byte[] result = new byte[extendedMessage.length];
 
+        long preA = ivA;
+        long preB = ivB;
+
         for (int i = 0; i < words.length; i += 2) {
-            byte[] twoWordsEncrypted = encryptTwoWords(words[i], words[i + 1]);
-            System.arraycopy(twoWordsEncrypted, 0, result, i * wordLengthInBytes, twoWordsEncrypted.length);
+            long wordA = words[i] ^ preA;
+            long wordB = words[i + 1] ^ preB;
+
+            long[] twoWordsEncrypted = encryptTwoWords(wordA, wordB);
+
+            System.arraycopy(longToByteArray(twoWordsEncrypted[0]), 0, result, i * wordLengthInBytes, wordLengthInBytes);
+            System.arraycopy(longToByteArray(twoWordsEncrypted[1]), 0, result, (i + 1) * wordLengthInBytes, wordLengthInBytes);
+
+            preA = twoWordsEncrypted[0];
+            preB = twoWordsEncrypted[1];
         }
 
         return result;
@@ -235,9 +242,20 @@ public class RC5Utils {
         long[] words = splitArrayToWords(extendedMessage);
         byte[] result = new byte[extendedMessage.length];
 
+        long preA = ivA;
+        long preB = ivB;
+
         for (int i = 0; i < words.length; i += 2) {
-            byte[] twoWordsEncrypted = decryptTwoWords(words[i], words[i + 1]);
-            System.arraycopy(twoWordsEncrypted, 0, result, i * wordLengthInBytes, twoWordsEncrypted.length);
+            long[] twoWordsDecrypted = decryptTwoWords(words[i], words[i + 1]);
+
+            twoWordsDecrypted[0] = twoWordsDecrypted[0] ^ preA;
+            twoWordsDecrypted[1] = twoWordsDecrypted[1] ^ preB;
+
+            System.arraycopy(longToByteArray(twoWordsDecrypted[0]), 0, result, i * wordLengthInBytes, wordLengthInBytes);
+            System.arraycopy(longToByteArray(twoWordsDecrypted[1]), 0, result, (i + 1) * wordLengthInBytes, wordLengthInBytes);
+
+            preA = words[i];
+            preB = words[i + 1];
         }
 
         return result;
