@@ -21,8 +21,10 @@ public class Dispatcher {
                 Options:
                   1 - encrypt file
                   2 - decrypt file
-                  3 - change password
-                  9 - exit
+                  3 - encrypt message
+                  4 - decrypt message
+                  5 - change password
+                  0 - exit
                 """);
 
         while (true) {
@@ -31,10 +33,10 @@ public class Dispatcher {
             switch (scanner.next()) {
                 case "1" -> encryptFile();
                 case "2" -> decryptFile();
-                case "3" -> updateRc5Password();
-                case "4" -> encryptMessage();
-                case "5" -> decryptMessage();
-                case "9" -> {
+                case "3" -> encryptMessage();
+                case "4" -> decryptMessage();
+                case "5" -> updateRc5Password();
+                case "0" -> {
                     return;
                 }
             }
