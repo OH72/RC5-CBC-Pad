@@ -13,6 +13,7 @@ public class RC5Utils {
     private final int numberOfRounds;
     private final int secretKeyLengthInBytes;
     private final long[] s;
+    private final PseudoRandomGenerator pseudoRandomGenerator;
 
     public RC5Utils(WordLength wordLength, int numberOfRounds, int secretKeyLengthInBytes, String password) {
         this.wordLengthInBits = wordLength.getLength();
@@ -23,6 +24,7 @@ public class RC5Utils {
         this.numberOfRounds = numberOfRounds;
         this.secretKeyLengthInBytes = secretKeyLengthInBytes;
         this.s = generateArrayS(password);
+        this.pseudoRandomGenerator = new PseudoRandomGenerator();
     }
 
     public long[] generateArrayS(String password) {
@@ -204,7 +206,9 @@ public class RC5Utils {
     }
 
     private long[] generateIv() {
-        return new long[]{190, 1920312};
+        return new long[]{
+                pseudoRandomGenerator.generateNext(),
+                pseudoRandomGenerator.generateNext()};
     }
 
     public byte[] encryptCbc(byte[] message) {
