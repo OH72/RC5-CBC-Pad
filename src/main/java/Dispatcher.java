@@ -2,6 +2,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Base64;
 import java.util.Scanner;
 
 /**
@@ -31,6 +32,8 @@ public class Dispatcher {
                 case "1" -> encryptFile();
                 case "2" -> decryptFile();
                 case "3" -> updateRc5Password();
+                case "4" -> encryptMessage();
+                case "5" -> decryptMessage();
                 case "9" -> {
                     return;
                 }
@@ -78,7 +81,27 @@ public class Dispatcher {
 
     private void updateRc5Password() {
         System.out.print("Input RC5 password: ");
-        this.rc5Utils = new RC5Utils(RC5Utils.WordLength._64, 12, 16, scanner.next());
+        this.rc5Utils = new RC5Utils(RC5Utils.WordLength._32, 12, 16, scanner.next());
+    }
+
+    private void encryptMessage() {
+        System.out.print("Message to encrypt: ");
+        String sourceMessage = scanner.next();
+
+        byte[] resultBytes = rc5Utils.encrypt(sourceMessage.getBytes());
+
+        System.out.println("Encrypted message:");
+        System.out.println(new String(Base64.getEncoder().encode(resultBytes)));
+    }
+
+    private void decryptMessage() {
+        System.out.print("64Based message to decrypt: ");
+        String sourceMessage = scanner.next();
+
+        byte[] resultBytes = rc5Utils.decrypt(Base64.getDecoder().decode(sourceMessage.getBytes()));
+
+        System.out.println("Decrypted message:");
+        System.out.println(new String(resultBytes));
     }
 
     public static void main(String[] args) {

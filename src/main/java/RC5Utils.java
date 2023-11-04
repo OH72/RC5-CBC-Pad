@@ -6,6 +6,7 @@ import java.util.Arrays;
  **/
 public class RC5Utils {
     private final int wordLengthInBytes;
+    private final int wordLengthInBits;
     private final long wordBytesUsage;
     private final long arrP;
     private final long arrQ;
@@ -14,7 +15,8 @@ public class RC5Utils {
     private final long[] s;
 
     public RC5Utils(WordLength wordLength, int numberOfRounds, int secretKeyLengthInBytes, String password) {
-        this.wordLengthInBytes = wordLength.getLength() / 8 + wordLength.getLength() % 8;
+        this.wordLengthInBits = wordLength.getLength();
+        this.wordLengthInBytes = wordLength.getLength() / 8;
         this.wordBytesUsage = wordLength.bytesUsage;
         this.arrP = wordLength.getP();
         this.arrQ = wordLength.getQ();
@@ -91,8 +93,11 @@ public class RC5Utils {
     private long byteArrayToLong(byte[] byteArray) {
         long value = 0L;
 
-        for (int i = byteArray.length - 1; i >= 0; i--) {
-            value = (value << 8) + (byteArray[i] & 0xF);
+        int offset = 0;
+
+        for (byte b : byteArray) {
+            value = value + (((long) (b & 0xFF)) << offset);
+            offset += 8;
         }
 
         return value;
@@ -101,8 +106,8 @@ public class RC5Utils {
     private byte[] longToByteArray(long value) {
         byte[] byteArray = new byte[wordLengthInBytes];
 
-        for (int i = byteArray.length - 1; i >= 0; i--) {
-            byteArray[i] = (byte) (value & 0xF);
+        for (int i = 0; i < byteArray.length; i++) {
+            byteArray[i] = (byte) (value & 0xFF);
             value >>= 8;
         }
 
@@ -118,25 +123,6 @@ public class RC5Utils {
         }
 
         return arrS;
-    }
-
-    private byte[] encryptTwoWords(long a, long b) {
-        a = (a + s[0]) & wordBytesUsage;
-        b = (b + s[1]) & wordBytesUsage;
-
-        for (int i = 0; i < numberOfRounds; i++) {
-            a = ((a ^ b) << b) & wordBytesUsage;
-            a = (a + s[2 * i]) & wordBytesUsage;
-
-            b = ((b ^ a) << a) & wordBytesUsage;
-            b = (b + s[2 * i + 1]) & wordBytesUsage;
-        }
-
-        byte[] result = new byte[wordLengthInBytes * 2];
-        System.arraycopy(longToByteArray(a), 0, result, 0, wordLengthInBytes);
-        System.arraycopy(longToByteArray(b), 0, result, wordLengthInBytes, wordLengthInBytes);
-
-        return result;
     }
 
     private byte[] messagePadding(byte[] message) {
@@ -155,6 +141,76 @@ public class RC5Utils {
         return result;
     }
 
+    private long loopLeftShift(long value, long bits) {
+        bits = bits % wordLengthInBits;
+
+        long copyValue = value;
+
+        value <<= bits;
+        value &= wordBytesUsage;
+
+        copyValue >>= (wordLengthInBits - bits);
+        copyValue &= wordBytesUsage;
+
+        return value | copyValue;
+    }
+
+    private long loopRightShift(long value, long bits) {
+        bits = bits % wordLengthInBits;
+
+        long copyValue = value;
+
+        value >>= bits;
+        value &= wordBytesUsage;
+
+        copyValue <<= (wordLengthInBits - bits);
+        copyValue &= wordBytesUsage;
+
+        return (value | copyValue);
+    }
+
+    private byte[] encryptTwoWords(long a, long b) {
+        a = (a + s[0]) & wordBytesUsage;
+        b = (b + s[1]) & wordBytesUsage;
+
+        for (int i = 1; i <= numberOfRounds; i++) {
+            a = a ^ b;
+            a = loopLeftShift(a, b);
+            a = (a + s[2 * i]) & wordBytesUsage;
+
+            b = b ^ a;
+            b = loopLeftShift(b, a);
+            b = (b + s[2 * i + 1]) & wordBytesUsage;
+        }
+
+        byte[] result = new byte[wordLengthInBytes * 2];
+        System.arraycopy(longToByteArray(a), 0, result, 0, wordLengthInBytes);
+        System.arraycopy(longToByteArray(b), 0, result, wordLengthInBytes, wordLengthInBytes);
+
+        return result;
+    }
+
+    private byte[] decryptTwoWords(long a, long b) {
+        for (int i = numberOfRounds; i >= 1; i--) {
+            b = (b - s[2 * i + 1]) & wordBytesUsage;
+            b = loopRightShift(b, a);
+            b = b ^ a;
+
+            a = (a - s[2 * i]) & wordBytesUsage;
+            a = loopRightShift(a, b);
+            a = a ^ b;
+        }
+
+        b = (b - s[1]) & wordBytesUsage;
+        a = (a - s[0]) & wordBytesUsage;
+
+        byte[] result = new byte[wordLengthInBytes * 2];
+        System.arraycopy(longToByteArray(a), 0, result, 0, wordLengthInBytes);
+        System.arraycopy(longToByteArray(b), 0, result, wordLengthInBytes, wordLengthInBytes);
+
+        return result;
+    }
+
     public byte[] encrypt(byte[] message) {
         byte[] extendedMessage = messagePadding(message);
         long[] words = splitArrayToWords(extendedMessage);
@@ -164,25 +220,6 @@ public class RC5Utils {
             byte[] twoWordsEncrypted = encryptTwoWords(words[i], words[i + 1]);
             System.arraycopy(twoWordsEncrypted, 0, result, i * wordLengthInBytes, twoWordsEncrypted.length);
         }
-
-        return result;
-    }
-
-    private byte[] decryptTwoWords(long a, long b) {
-        a = (a + s[0]) & wordBytesUsage;
-        b = (b + s[1]) & wordBytesUsage;
-
-        for (int i = 0; i < numberOfRounds; i++) {
-            b = ((b - s[2 * i + 1]) >> a) ^ a;
-            a = ((a - s[2 * i]) >> b) ^ b;
-        }
-
-        b = b - s[1];
-        a = a - s[0];
-
-        byte[] result = new byte[wordLengthInBytes * 2];
-        System.arraycopy(longToByteArray(a), 0, result, 0, wordLengthInBytes);
-        System.arraycopy(longToByteArray(b), 0, result, wordLengthInBytes, wordLengthInBytes);
 
         return result;
     }
@@ -220,7 +257,7 @@ public class RC5Utils {
         _64(
                 64,
                 0xFFFFFFFFFFFFFFFFL,
-                0xB7E151628AD2A66BL,
+                0xB7E151628AED2A6BL,
                 0x9E3779B97F4A7C15L);
 
         private final int length;
