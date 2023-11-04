@@ -77,7 +77,7 @@ public class Dispatcher {
             Path destinationPath = Paths.get(destinationFilePath);
 
             byte[] sourceBytes = Files.readAllBytes(sourcePath);
-            byte[] destinationBytes = rc5CbcPadUtils.encryptCbc(sourceBytes);
+            byte[] destinationBytes = rc5CbcPadUtils.decryptCbc(sourceBytes);
 
             Files.write(destinationPath, destinationBytes);
         } catch (IOException e) {
