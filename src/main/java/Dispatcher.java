@@ -4,6 +4,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Base64;
 import java.util.Scanner;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * @author Oleh Hembarovskyi
@@ -13,7 +15,7 @@ public class Dispatcher {
     private static final Rc5CbcPadUtils.WordLength WORD_LENGTH = Rc5CbcPadUtils.WordLength._32;
     private static final int NUMBER_OF_ROUNDS = 20;
     private static final int SECRET_KEY_LENGTH = 16;
-
+    private static final Logger LOGGER = Logger.getLogger(Dispatcher.class.getName());
     private final Scanner scanner = new Scanner(System.in);
     private Rc5CbcPadUtils rc5CbcPadUtils;
 
@@ -33,16 +35,20 @@ public class Dispatcher {
 
         while (true) {
             System.out.print("<---->\nInput option: ");
-
-            switch (scanner.next()) {
-                case "1" -> encryptFile();
-                case "2" -> decryptFile();
-                case "3" -> encryptMessage();
-                case "4" -> decryptMessage();
-                case "5" -> updateRc5Password();
-                case "0" -> {
-                    return;
+            try {
+                switch (scanner.next()) {
+                    case "1" -> encryptFile();
+                    case "2" -> decryptFile();
+                    case "3" -> encryptMessage();
+                    case "4" -> decryptMessage();
+                    case "5" -> updateRc5Password();
+                    case "0" -> {
+                        return;
+                    }
                 }
+            } catch (Exception e) {
+                System.out.println("Unexpected error");
+                LOGGER.log(Level.ALL, e.getMessage());
             }
         }
     }
