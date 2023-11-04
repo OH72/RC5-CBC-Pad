@@ -10,6 +10,10 @@ import java.util.Scanner;
  * @since 21/10/2023
  **/
 public class Dispatcher {
+    private static final RC5Utils.WordLength WORD_LENGTH = RC5Utils.WordLength._32;
+    private static final int NUMBER_OF_ROUNDS = 20;
+    private static final int SECRET_KEY_LENGTH = 16;
+
     private final Scanner scanner = new Scanner(System.in);
     private RC5Utils rc5Utils;
 
@@ -83,7 +87,7 @@ public class Dispatcher {
 
     private void updateRc5Password() {
         System.out.print("Input RC5 password: ");
-        this.rc5Utils = new RC5Utils(RC5Utils.WordLength._32, 20, 16, scanner.next());
+        this.rc5Utils = new RC5Utils(WORD_LENGTH, NUMBER_OF_ROUNDS, SECRET_KEY_LENGTH, scanner.next());
     }
 
     private void encryptMessage() {
