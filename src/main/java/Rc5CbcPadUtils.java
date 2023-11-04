@@ -4,7 +4,7 @@ import java.util.Arrays;
  * @author Oleh Hembarovskyi
  * @since 29/10/2023
  **/
-public class RC5Utils {
+public class Rc5CbcPadUtils {
     private final int wordLengthInBytes;
     private final int wordLengthInBits;
     private final long wordBytesUsage;
@@ -15,7 +15,7 @@ public class RC5Utils {
     private final long[] s;
     private final PseudoRandomGenerator pseudoRandomGenerator;
 
-    public RC5Utils(WordLength wordLength, int numberOfRounds, int secretKeyLengthInBytes, String password) {
+    public Rc5CbcPadUtils(WordLength wordLength, int numberOfRounds, int secretKeyLengthInBytes, String password) {
         this.wordLengthInBits = wordLength.getLength();
         this.wordLengthInBytes = wordLength.getLength() / 8;
         this.wordBytesUsage = wordLength.bytesUsage;

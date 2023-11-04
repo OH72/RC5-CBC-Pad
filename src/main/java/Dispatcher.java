@@ -10,12 +10,12 @@ import java.util.Scanner;
  * @since 21/10/2023
  **/
 public class Dispatcher {
-    private static final RC5Utils.WordLength WORD_LENGTH = RC5Utils.WordLength._32;
+    private static final Rc5CbcPadUtils.WordLength WORD_LENGTH = Rc5CbcPadUtils.WordLength._32;
     private static final int NUMBER_OF_ROUNDS = 20;
     private static final int SECRET_KEY_LENGTH = 16;
 
     private final Scanner scanner = new Scanner(System.in);
-    private RC5Utils rc5Utils;
+    private Rc5CbcPadUtils rc5CbcPadUtils;
 
     public void start() {
         updateRc5Password();
@@ -58,7 +58,7 @@ public class Dispatcher {
             Path destinationPath = Paths.get(destinationFilePath);
 
             byte[] sourceBytes = Files.readAllBytes(sourcePath);
-            byte[] destinationBytes = rc5Utils.encryptCbc(sourceBytes);
+            byte[] destinationBytes = rc5CbcPadUtils.encryptCbc(sourceBytes);
 
             Files.write(destinationPath, destinationBytes);
         } catch (IOException e) {
@@ -77,7 +77,7 @@ public class Dispatcher {
             Path destinationPath = Paths.get(destinationFilePath);
 
             byte[] sourceBytes = Files.readAllBytes(sourcePath);
-            byte[] destinationBytes = rc5Utils.encryptCbc(sourceBytes);
+            byte[] destinationBytes = rc5CbcPadUtils.encryptCbc(sourceBytes);
 
             Files.write(destinationPath, destinationBytes);
         } catch (IOException e) {
@@ -87,14 +87,14 @@ public class Dispatcher {
 
     private void updateRc5Password() {
         System.out.print("Input RC5 password: ");
-        this.rc5Utils = new RC5Utils(WORD_LENGTH, NUMBER_OF_ROUNDS, SECRET_KEY_LENGTH, scanner.next());
+        this.rc5CbcPadUtils = new Rc5CbcPadUtils(WORD_LENGTH, NUMBER_OF_ROUNDS, SECRET_KEY_LENGTH, scanner.next());
     }
 
     private void encryptMessage() {
         System.out.print("Message to encrypt: ");
         String sourceMessage = scanner.next();
 
-        byte[] resultBytes = rc5Utils.encryptCbc(sourceMessage.getBytes());
+        byte[] resultBytes = rc5CbcPadUtils.encryptCbc(sourceMessage.getBytes());
 
         System.out.println("Encrypted message:");
         System.out.println(new String(Base64.getEncoder().encode(resultBytes)));
@@ -104,7 +104,7 @@ public class Dispatcher {
         System.out.print("64Based message to decrypt: ");
         String sourceMessage = scanner.next();
 
-        byte[] resultBytes = rc5Utils.decryptCbc(Base64.getDecoder().decode(sourceMessage.getBytes()));
+        byte[] resultBytes = rc5CbcPadUtils.decryptCbc(Base64.getDecoder().decode(sourceMessage.getBytes()));
 
         System.out.println("Decrypted message:");
         System.out.println(new String(resultBytes));
