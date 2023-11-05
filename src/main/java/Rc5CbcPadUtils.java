@@ -65,7 +65,10 @@ public class Rc5CbcPadUtils {
             byte[] result = new byte[secretKeyLengthInBytes];
 
             for (int i = 0; i < secretKeyLengthInBytes / hash.length + secretKeyLengthInBytes % hash.length; i++) {
-                System.arraycopy(hash, 0, result, secretKeyLengthInBytes - (i + 1) * hash.length, hash.length);
+                System.arraycopy(
+                        hash, 0, result,
+                        secretKeyLengthInBytes - (i + 1) * hash.length,
+                        Math.min(secretKeyLengthInBytes - (i + 1) * hash.length, hash.length));
                 hash = MD5Utils.md5(hash);
             }
 
@@ -298,7 +301,7 @@ public class Rc5CbcPadUtils {
             preB = words[i + 1];
         }
 
-        return  removeMessagePadding(result);
+        return removeMessagePadding(result);
     }
 
     public byte[] encryptEcb(byte[] message) {
@@ -337,7 +340,7 @@ public class Rc5CbcPadUtils {
             System.arraycopy(longToByteArray(twoWordsDecrypted[1]), 0, result, (i + 1) * wordLengthInBytes, wordLengthInBytes);
         }
 
-        return  removeMessagePadding(result);
+        return result;
     }
 
     public enum WordLength {
