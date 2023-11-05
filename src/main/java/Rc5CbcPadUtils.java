@@ -27,7 +27,7 @@ public class Rc5CbcPadUtils {
         this.pseudoRandomGenerator = new PseudoRandomGenerator();
     }
 
-    public long[] generateArrayS(String password) {
+    private long[] generateArrayS(String password) {
         byte[] arrK = generateSecretKey(password);
         long[] arrL = splitArrayToWords(arrK);
         long[] arrS = initArrayS();
@@ -304,7 +304,7 @@ public class Rc5CbcPadUtils {
         return removeMessagePadding(result);
     }
 
-    public byte[] encryptEcb(byte[] message) {
+    private byte[] encryptEcb(byte[] message) {
         byte[] extendedMessage = addMessagePadding(message);
         long[] words = splitArrayToWords(extendedMessage);
         byte[] result = new byte[extendedMessage.length];
@@ -322,7 +322,7 @@ public class Rc5CbcPadUtils {
         return result;
     }
 
-    public byte[] decryptEcb(byte[] message) {
+    private byte[] decryptEcb(byte[] message) {
         int extendedMessageLength = (message.length / wordLengthInBytes + message.length % wordLengthInBytes);
         extendedMessageLength += extendedMessageLength % 2;
         extendedMessageLength *= wordLengthInBytes;
@@ -372,19 +372,19 @@ public class Rc5CbcPadUtils {
             this.q = q;
         }
 
-        public int getLength() {
+        private int getLength() {
             return length;
         }
 
-        public long getBytesUsage() {
+        private long getBytesUsage() {
             return bytesUsage;
         }
 
-        public long getP() {
+        private long getP() {
             return p;
         }
 
-        public long getQ() {
+        private long getQ() {
             return q;
         }
     }
